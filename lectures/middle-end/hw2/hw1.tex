@@ -1,0 +1,311 @@
+\documentclass{article}
+\usepackage{fullpage}
+%\usepackage[landscape]{geometry}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{lscape}
+
+\usepackage[margin=0.5in]{geometry}
+
+
+\begin{document}
+\newcommand{\tabincell}[2]{\begin{tabular}{@{}#1@{}}#2\end{tabular}}
+\begin{center}
+{\Large \bf CS 5130 Homework II}
+\vspace*{2em}
+
+Liang Yan   
+\\From Computer Science\\
+\end{center}
+
+
+\noindent
+% This is the question 1
+1. Answer the following questions related to reaching definitions analysis for the CFG
+\\
+(a) Give the GEN and PRSV sets for each basic block
+\\
+{\small
+\\
+$U=\{r1@1,r10@2,r2@3,r11@4,r3@5,r15@6,r4@7,r13@8,r5@9,r14@10,r6@12,r14@13,r4@15,r14@16,\\
+r1@17,r7@18,r15@19,r4@21,r11@22,r5@23,r15@24,r6@26,r10@27,r8@28,r11@29\}$
+\\
+\\
+\begin{tabular}{| l | c | l |} 
+ \hline
+ BB & GEN & PRSV\\
+  \hline                       
+  B0 & {r1@1,r10@2,r2@3,r11@4,r3@5 } & \tabincell{l}
+  {r15@6,r4@7,r13@8,r5@9,r14@10,r6@12,r14@13,r4@15,r14@16,\\
+   r7@18,r15@19,r4@21,r5@23,r15@24,r6@26,r10@27,r8@28 } \\
+\hline
+  B1 & {r15@6,r4@7,r13@8,r5@9,r14@10} & \tabincell{l} {r1@1,r10@2,r2@3,r11@4,r3@5,r6@12,\\
+r1@17,r7@18,r11@22,r6@26,r10@27,r8@28,r11@29}\\
+\hline
+  B2 & {r6@12,r14@13} &
+  \tabincell{l}{r1@1,r10@2,r2@3,r11@4,r3@5,r15@6,r4@7,r13@8,r5@9,
+    r4@15\\r1@17,r7@18,r15@19,r4@21,r11@22,r5@23,r15@24,r10@27,r8@28,r11@29} \\
+\hline
+  B3 & {r4@15,r14@16,r1@17,r7@18,r15@19} &
+  \tabincell{l}{r10@2,r2@3,r3@5,r13@8,r5@9,r14@10,\\ r6@12,r14@13r5@23,r6@26,r10@27,r8@28} \\
+  \hline                       
+  B4 & {r4@21,r11@22,r5@23,r15@24} &  \tabincell{l}{r1@1,r10@2,r2@3,r3@5,r13@8,r14@10,r6@12,r14@13,
+    r14@16,\\r1@17,r7@18,r6@26,r10@27,r8@28} \\
+\hline
+  B5 & {r6@26,r10@27,r8@28,r11@29} &
+  \tabincell{l}{r1@1,r2@3,r3@5,r15@6,r4@7,r13@8,r5@9,r14@10,r14@13,\\r4@15,r14@16,r1@17,r7@18,
+    r15@19,r4@21,r5@23,r15@24} \\
+  \hline  
+\end{tabular}
+\\\\(b)
+\\Init.(iter.0)\\
+IN(b) = $\emptyset$,
+OUT(b)=Gen(b) $\cup$ (IN(b) $\cap$ PRSV(b)) = Gen(b) \\\\
+\begin{tabular}{| l | c | l |} 
+ \hline
+ BB & IN & OUT\\
+  \hline                       
+  B0 & $\emptyset$ &{r1@1,r10@2,r2@3,r11@4,r3@5 }\\
+\hline
+  B1 & $\emptyset$ &{r15@6,r4@7,r13@8,r5@9,r14@10} \\
+\hline
+  B2 & $\emptyset$& {r6@12,r14@13}  \\
+\hline
+  B3 & $\emptyset$& {r4@15,r14@16,r1@17,r7@18,r15@19}  \\
+  \hline                       
+  B4 & $\emptyset$& {r4@21,r11@22,r5@23,r15@24} \\
+\hline
+  B5 & $\emptyset$& {r6@26,r10@27,r8@28,r11@29} \\
+  \hline  
+\end{tabular}
+\\\\iter.1
+\\ IN(b) = $\bigcup_{p\in pred(b)} OUT(p) $\\ 
+OUT(b)=Gen(b) $\cup$ (IN(b) $\cap$ PRSV(b)) = Gen(b) \\\\
+\begin{tabular}{| l | c | l |} 
+ \hline
+ BB & IN & OUT \\
+  \hline                       
+  B0 & $\emptyset$ &{r1@1,r10@2,r2@3,r11@4,r3@5 }\\
+\hline
+  B1 & {r1@1,r10@2,r2@3,r11@4,r3@5,r4@21,r11@22,r5@23,r15@24} & \tabincell{l} {r1@1,r10@2,r2@3,r11@4,r3@5,\\r15@6,r4@7,r13@8,r5@9,r14@10,r11@22}\\
+\hline
+  B2 &
+  \tabincell{c}{r1@1,r10@2,r2@3,r11@4,r3@5,r15@6,r4@7,r13@8,r5@9,\\
+  r14@10,r4@15,r14@16,r1@17,r7@18,r15@19,r11@22} &
+  \tabincell{l}{r1@1,r10@2,r2@3,r11@4,r3@5,r15@6,r4@7,r13@8,r5@9,
+    \\r6@12,r14@13,r4@15,r1@17,r7@18,r15@19,r11@22} \\
+\hline
+  B3 & \tabincell{c}{r1@1,r10@2,r2@3,r11@4,r3@5,r15@6,r4@7,r13@8,r5@9,
+    \\r6@12,r14@13,r4@15,r1@17,r7@18,r15@19,r11@22} &
+  \tabincell{l}{r10@2,r2@3,r3@5,r13@8,r5@9,r6@12,\\r14@13,r4@15,r14@16,r1@17,r7@18,r15@19} \\
+  \hline                       
+  B4 & \tabincell{l} {r1@1,r10@2,r2@3,r11@4,r3@5,r15@6,r4@7,r13@8,
+    \\r5@9,r14@10,r6@12,r14@13,r4@15,r1@17,r7@18,r15@19,r11@22} &
+  \tabincell{l}{r1@1,r10@2,r2@3,r3@5,r13@8,r14@10, 
+    \\r6@12,r14@13,r1@17,r7@18,r4@21,r11@22,r5@23,r15@24} \\
+\hline
+  B5 & \tabincell{l}{r1@1,r10@2,r2@3,r3@5,r13@8,r14@10, 
+    \\r6@12,r14@13,r1@17,r7@18,r4@21,r11@22,r5@23,r15@24} &
+  \tabincell{l}{r1@1,r2@3,r3@5,r13@8,r14@10,r14@13,
+\\r1@17,r7@18,r4@21,r5@23,r15@24,r6@26,r10@27,r8@28,r11@29}
+  \\
+  \hline  
+\end{tabular}
+\\\\iter.2
+\\ IN(b) = $\bigcup_{p\in pred(b)} OUT(p) $\\ 
+OUT(b)=Gen(b) $\cup$ (IN(b) $\cap$ PRSV(b)) = Gen(b) \\\\
+\begin{tabular}{| l | c | l |} 
+ \hline
+ BB & IN & OUT \\
+  \hline                       
+  B0 & $\emptyset$ &{r1@1,r10@2,r2@3,r11@4,r3@5 }\\
+\hline
+  B1 &
+  \tabincell{c}{r1@1,r10@2,r2@3,r11@4,r3@5,r13@8,r14@10,r6@12,r14@13\\r1@17,r7@18,
+    r4@21,r11@22,r5@23,r15@24} & \tabincell{l}
+  {r1@1,r10@2,r2@3,r11@4,r3@5,r15@6,r4@7,r13@8,r5@9,\\r14@10,r1@17,r7@18,r11@22}\\
+\hline
+  B2 &
+  \tabincell{c}{r1@1,r10@2,r2@3,r11@4,r3@5,r15@6,r4@7,r13@8,r5@9,\\
+  r14@10,r6@12,r14@13,r4@15,r14@16,r1@17,r7@18,r15@19,r11@22} &
+  \tabincell{l}{r1@1,r10@2,r2@3,r11@4,r3@5,r15@6,r4@7,r13@8,r5@9,
+    \\r6@12,r14@13,r4@15,r1@17,r7@18,r15@19,r11@22} \\
+\hline
+  B3 & \tabincell{c}{r1@1,r10@2,r2@3,r11@4,r3@5,r15@6,r4@7,r13@8,r5@9,
+    \\r6@12,r14@13,r4@15,r1@17,r7@18,r15@19,r11@22} &
+  \tabincell{l}{r10@2,r2@3,r3@5,r13@8,r5@9,r6@12,\\
+    r14@13,r4@15,r14@16,r1@17,r7@18,r15@19} \\
+  \hline                       
+  B4 & \tabincell{l} {r1@1,r10@2,r2@3,r11@4,r3@5,r15@6,r4@7,r13@8,
+    \\r5@9,r14@10,r6@12,r14@13,r4@15,r1@17,r7@18,r15@19,r11@22} &
+  \tabincell{l}{r1@1,r10@2,r2@3,r3@5,r13@8,r14@10, 
+    \\r6@12,r14@13,r1@17,r7@18,r4@21,r11@22,r5@23,r15@24} \\
+\hline
+  B5 & \tabincell{l}{r1@1,r10@2,r2@3,r3@5,r13@8,r14@10, 
+    \\r6@12,r14@13,r1@17,r7@18,r4@21,r11@22,r5@23,r15@24} &
+  \tabincell{l}{r1@1,r2@3,r3@5,r13@8,r14@10,r14@13,
+\\r1@17,r7@18,r4@21,r5@23,r15@24,r6@26,r10@27,r8@28,r11@29}
+  \\
+  \hline  
+\end{tabular}
+\\\\iter.3
+\\No change\\
+(c)\\
+B0 $r1\Rightarrow r1@1,r2\Rightarrow r2@3$\\
+B1 $r3\Rightarrow r3@5,r10\Rightarrow r10@2,r11\Rightarrow r11@4 or
+r11@22,r4\Rightarrow r4@7,r13\Rightarrow r13@8,r10\Rightarrow
+r10@2,r5\Rightarrow r5@9, r14\Rightarrow r14@10$\\
+B2 $r11\Rightarrow r11@4 or r11@22,r14\Rightarrow r14@13,r6\Rightarrow
+r6@12,r14\Rightarrow r14@13$ \\
+B3 $r10\Rightarrow r10@2,r11\Rightarrow r11@22 or r11@4,r4 \Rightarrow
+r4@15,r15\Rightarrow r15@19 or r15@6,r1\Rightarrow r1@17,r7\Rightarrow
+ r7@18$\\
+B4 $r10\Rightarrow r10@2,r11\Rightarrow r11@22 or r11@4,r4\Rightarrow 
+r4@21,r13\Rightarrow r13@8,r10\Rightarrow r10@2,r5\Rightarrow
+r5@23,r15\Rightarrow r15@24$\\
+B5 $r11\Rightarrow r11@22,r14\Rightarrow r14@13, r6\Rightarrow
+r6@26,r10\Rightarrow r10@27,r14\Rightarrow r14@13,r8\Rightarrow r8@28$
+}
+%\begin{landscape}
+%\end{landscape}
+\\\\\\
+2.Answer the following questions related to liveness analysis analysis
+for the CFG
+\\
+(a) Give the GEN and PRSV sets for each basic block
+{\small
+\\
+$U=\{r1,r2,r3,r4,r5,r6,r7,r8,r10,r11,r13,r14,r15 \}$
+\\
+\\
+\begin{tabular}{| l | c | l |} 
+ \hline
+ BB & GEN & PRSV\\
+  \hline                       
+  B5 & {r11,r14 } & \tabincell{l}
+  {r1,r2,r3,r4,r5,r7,r13,r14,r15} \\
+\hline
+  B4 & {r10,r11,r13} & \tabincell{l} {r1,r2,r3,r6,r7,r8,r10,r13,r14}\\
+\hline
+  B3 & {r10,r11,r15} &
+  \tabincell{l}{r2,r3,r5,r6,r8,r10,r13} \\
+\hline
+  B2 & {r11,r14} &
+  \tabincell{l}{r1,r2,r3,r4,r5,r7,r8,r10,r11,r13,r15} \\
+  \hline                       
+  B1 & {r3,r10,r11} &  \tabincell{l}{r1,r2,r3,r6,r7,r8,r10,r11} \\
+\hline
+  B0 & $\emptyset$ &
+  \tabincell{l}{r4,r5,r6,r7,r8,r13,r14,r15} \\
+  \hline  
+\end{tabular}
+\\\\\\
+(b)Liveness is a backwards problem, That is because to verify a node
+is liveness or not we , so we need to take postOrder to analysis it.
+\\\\
+(c)
+\\Init.(iter.0)\\
+OUT(b) = $\emptyset$,
+IN(b)=Gen(b) $\cup$ (OUT(b) $\cap$ PRSV(b)) = Gen(b) \\\\
+\begin{tabular}{| l | c | l |} 
+ \hline
+ BB & OUT & IN\\
+  \hline                       
+  B5 & $\emptyset$ &{r11,r14}\\
+\hline
+  B4 & $\emptyset$ &{r10,r11,r13} \\
+\hline
+  B3 & $\emptyset$& {r10,r11,r15}  \\
+\hline
+  B2 & $\emptyset$& {r11,r14}  \\
+  \hline                       
+  B1 & $\emptyset$& {r3,r19,r11} \\
+\hline
+  B0 & $\emptyset$& $\emptyset$ \\
+  \hline  
+\end{tabular}
+\\\\iter.1
+\\ OUT(b) = $\bigcup_{s\in succs(b)} IN(s) $\\ 
+IN(b)=Gen(b) $\cup$ (OUT(b) $\cap$ PRSV(b)) = Gen(b) \\\\
+\begin{tabular}{| l | c | l |} 
+ \hline
+ BB & OUT & IN \\
+  \hline                       
+  B5 & $\emptyset$ &{r11,r14}\\
+\hline
+  B4 & {r3,r11,r14,r10} & \tabincell{l} {r3,r10,r11,r13,r14}\\
+\hline
+  B3 &
+  \tabincell{c}{r11,r14} &
+  \tabincell{l}{r10,r11,r15} \\
+\hline
+  B2 & \tabincell{c}{r3,r10,r11,r13,r14,r15} &
+  \tabincell{l}{r3,r10,r11,r13,r14,r15} \\
+  \hline                       
+  B1 & \tabincell{l} {r3,r10,r11,r13,r14,r15} &
+  \tabincell{l}{r3,r10,r11} \\
+\hline
+  B0 & \tabincell{l}{r3,r10,r11} &
+  \tabincell{l}{$\emptyset$}
+  \\
+  \hline  
+\end{tabular}
+\\\\iter.2
+\\ OUT(b) = $\bigcup_{s\in succs(b)} IN(s) $\\ 
+IN(b)=Gen(b) $\cup$ (OUT(b) $\cap$ PRSV(b)) = Gen(b) \\\\
+\begin{tabular}{| l | c | l |} 
+ \hline
+ BB & OUT & IN \\
+  \hline                       
+  B5 & $\emptyset$ &{r11,r14}\\
+\hline
+  B4 & {r3,r11,r14,r10} & \tabincell{l} {r3,r10,r11,r13,r14}\\
+\hline
+  B3 &
+  \tabincell{c}{r3,r10,r11,r13,r14,r15} &
+  \tabincell{l}{r3,r10,r11,r13,r14,r15} \\
+\hline
+  B2 & \tabincell{c}{r3,r10,r11,r13,r14,r15} &
+  \tabincell{l}{r3,r10,r11,r13,r14,r15} \\
+  \hline                       
+  B1 & \tabincell{l} {r3,r10,r11,r13,r14,r15} &
+  \tabincell{l}{r3,r10,r11} \\
+\hline
+  B0 & \tabincell{l}{r3,r10,r11} &
+  \tabincell{l}{$\emptyset$}
+  \\
+  \hline  
+\end{tabular}
+\\\\iter.3
+\\ OUT(b) = $\bigcup_{s\in succs(b)} IN(s) $\\ 
+IN(b)=Gen(b) $\cup$ (OUT(b) $\cap$ PRSV(b)) = Gen(b) \\\\
+No change
+\\\\
+3 living analysis
+\\(a)pointer reference.
+\\if we could know which variable the pointer reference, we can just
+use this variable instead, however, sometimes we could not verify
+until run-time, so we need to find all possible variables, the simple
+ideas is to think it points to all variables.
+\\
+Assume pointer on the right, GEN need to insert ,PRSV no change,
+Assume pointer on the left, GEN no change ,PRSV becomes empty set,
+\\(b)procedure calls \\
+Same situations for procedure calls.
+functions can do anything – redeﬁne variables, use variables
+So DEF(foo()) is $\emptyset$ and USE(foo()) is $\bigcup$ 
+\\\\4.sinking transformation.
+\\(a)\\
+Sinking is a transformation that move an instruction to its succsor
+when its result is first needed. So we need make sure the operands of
+the instruction could not be changed during its node to sinking point,
+also we need to find where the lvalue of the instruction is first
+used, then copy the instruction here and eliment the former one.
+\\
+Forward, allpath problem.
+\\(b)
+available set. if found the instruction in this set, we need to delete
+,if found the operand in this set we insert a new instruction and
+delete the sets.
+\end{document}

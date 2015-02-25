@@ -1,0 +1,1 @@
+libparser-g.a(CminusParser.o): CminusParser.c

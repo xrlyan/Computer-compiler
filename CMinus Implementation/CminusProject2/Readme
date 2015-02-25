@@ -1,0 +1,15 @@
+CS4121 Cminus Expression Interpreter Project II
+
+written by liang yan
+
+1. add file node.h
+
+2. construct an abstract tree for the whole program blocks.
+
+
+3. Finally travers this tree by top down. and generate assembly code seperatly.
+
+
+
+
+

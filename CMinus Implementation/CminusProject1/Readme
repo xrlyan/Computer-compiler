@@ -1,0 +1,31 @@
+CS4121 Cminus Expression Interpreter Project
+
+written by liang yan
+
+1. Change all the project to C++ platform, so please run 
+by my own Makefile which is tested by campus computer.
+
+2. File CminusScanner.l
+
+add variable for IDENTIFIER and INTCON and STRING, so
+we could get right value from bison part.
+
+
+3. File CminusParse.y
+
+add a map structure for varable, so we could get a int value from a
+string variable.
+
+add union part for bison,
+
+add type configuration for bison
+
+change assignment part to output right answer.
+
+change each expression (logic operation, comparison operation regular operation
+and so on)
+
+change variable string constant part to get right value from flex.
+
+
+

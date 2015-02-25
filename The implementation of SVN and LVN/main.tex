@@ -1,0 +1,181 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Thesis 
+% LaTeX Template
+% Version 1.0 (01/01/13)
+%
+% This template has been downloaded from:
+% http://www.leonstudio.org
+%
+% Original authors:
+% Leo yan 
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+% Note:
+% Make sure to edit document variables in the Thesis.cls file
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%       PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+% Paper size, default font size and one-sided paper
+\documentclass[11pt, a4paper, oneside]{Thesis}
+\usepackage{titlesec}
+
+\usepackage{enumerate}
+
+% Specifies the directory where pictures are stored
+\graphicspath{{./Pictures/}}
+
+% Use the natbib reference package - read up on this to edit the reference style; if you want text (e.g. Smith et al., 2012) for the in-text references (instead of numbers), remove 'numbers'
+\usepackage[square, numbers, comma, sort&compress]{natbib} 
+\hypersetup{urlcolor=blue, colorlinks=true} % Colors hyperlinks in blue - change to black if annoying
+\title{\ttitle} % Defines the thesis title - don't touch this
+
+
+\begin{document}
+
+
+% Use roman page numbering style (i, ii, iii, iv...) for the pre-content pages
+\frontmatter 
+
+% Line spacing of 1.3
+\setstretch{1.3}
+
+% Define the page headers using the FancyHdr package and set up for one-sided printing
+\fancyhead{} % Clears all page headers and footers
+\rhead{\thepage} % Sets the right side header to show the page number
+\lhead{} % Clears the left side page header
+
+\pagestyle{fancy} % Finally, use the "fancy" page style to implement the FancyHdr headers
+
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}} % New command to make the lines in the title page
+
+% PDF meta-data
+\hypersetup{pdftitle={\ttitle}}
+\hypersetup{pdfsubject=\subjectname}
+\hypersetup{pdfauthor=\authornames}
+\hypersetup{pdfkeywords=\keywordnames}
+
+%----------------------------------------------------------------------------------------
+%       TITLE PAGE
+%----------------------------------------------------------------------------------------
+
+\begin{titlepage}
+\begin{center}
+
+\includegraphics{logo.jpg}\\[1cm] %
+\textsc{\LARGE \univname}\\[1.5cm] % University name
+%\textsc{\Large Doctoral Thesis}\\[0.5cm] % Thesis type
+\HRule \\[1.0cm] % Horizontal line
+{\huge \bfseries \ttitle}\\[0.4cm] % Project
+
+\huge \textit {Project II}\\[0.1cm] % Project
+\HRule \\[1.5cm] % Horizontal line
+
+\small \textit{Writen by: \authornames}\\[0.5cm] % Research group name and department name
+\textit{Computer Science}\\[2cm] % Research group name and department nam 
+\textit{\large Last modified: \today}\\[4cm] % Date
+
+ 
+\vfill
+\end{center}
+
+\end{titlepage}
+
+
+\clearpage % Start a new page
+
+%----------------------------------------------------------------------------------------
+%       QUOTATION PAGE
+%----------------------------------------------------------------------------------------
+
+\pagestyle{empty} % No headers or footers for the following pages
+
+\textit{Project Requirement}
+
+\begin{enumerate}
+\item 
+In this project, implement and/or compare three value numbering techniques, local value numbering
+(LVN), super local value numbering (SVN) and dominator-tree-based global value numbering (GVN).
+\item GVN has already been implemented in LLVM (see (llvm)/lib/Transforms/Scalar/GVN.cpp).
+Note that GVN subsumes SVN, which, in turn, subsumes LVN. You need to update the GVN code so that
+it can be downgraded to perform LVN or SVN only. To implement super local value numbering, CS5130
+students need to implement an analysis pass that identifies extended basic blocks.
+\item You will need to introduce two new command line options for opt which suggest the optimizer to perform
+LVN or SVN instead of GVN. I will use command line option -std-compile-opts to trigger standard
+1compiler optimizations which include global value numbering. You should add the following two options
+to opt:
+\\1. -lvn: perform local value numbering only.
+\\2. -svn: perform super local value numbering only.
+\\3. output EBBs for each function if this option is enabled.
+\\
+\item Your code must work on the Rekhi lab machines. It is fine to use your own machine for development. But
+you must test your code in the lab machines.\\
+Download and install test-suite-3.4 from the LLVM website. We will use
+test-suite-3.4/SingleSource/Benchmarks/Stanford as the testing benchmark suite. Your
+optimizations should pass all the benchmarks in this suite. You also need to collect the total compile time,
+the compile time of LVN, SVN and GVN, the total execution time, and the number of instructions deleted
+by value numbering.
+\item 
+Extended Basic Block \\
+Dump all the extended basic blocks in each function led by the function name followed by a colon. Each
+EBB should be output as a pre-order sequence of the basic blocks in it enclosed by a pair of curly brackets
+and each basic block can be represented by its name.
+\item
+Submission\\
+Tar all the source files you have changed including their directories into a tar ball, project2.tar, and submit
+it through Canvas. Write a report that summarizes your implementation and analyzes your experimental
+results for the Stanford benchmark suite, attach your EBB outputs and name them after the original input file names
+with .ebb extension. For example, the EBB output for Bubblesort.c should be stored in file Bubblesort.ebb. 
+\end{enumerate}
+
+\clearpage % Start a new page
+
+
+
+%----------------------------------------------------------------------------------------
+%       LIST OF CONTENTS/FIGURES/TABLES PAGES
+%----------------------------------------------------------------------------------------
+
+%\pagestyle{fancy} % The page style headers have been "empty" all this time, now use the "fancy" headers as defined before to bring them back
+
+%\lhead{\emph{Contents}} % Set the left side page header to "Contents"
+%\tableofcontents % Write out the Table of Contents
+
+
+
+%----------------------------------------------------------------------------------------
+%       THESIS CONTENT - CHAPTERS
+%----------------------------------------------------------------------------------------
+
+\mainmatter % Begin numeric (1,2,3...) page numbering
+
+\pagestyle{fancy} % Return the page headers back to the "fancy" style
+
+% Include the chapters of the thesis as separate files from the Chapters folder
+% Uncomment the lines as you write the chapters
+
+\input{./Chapters/Chapter1}
+
+%----------------------------------------------------------------------------------------
+%       THESIS CONTENT - APPENDICES
+%----------------------------------------------------------------------------------------
+
+%\addtocontents{toc}{\vspace{2em}} % Add a gap in the Contents, for aesthetics
+
+%\appendix % Cue to tell LaTeX that the following 'chapters' are Appendices
+
+% Include the appendices of the thesis as separate files from the Appendices folder
+% Uncomment the lines as you write the Appendices
+%\input{./Appendices/code.pdf}
+%\input{./Appendices/AppendixB}
+%\input{./Appendices/AppendixC}
+
+\addtocontents{toc}{\vspace{2em}} % Add a gap in the Contents, for aesthetics
+
+\backmatter
+
+\end{document}  

@@ -1,0 +1,229 @@
+% Chapter 1
+
+%\titleformat{\chapter}{\centering\Huge\bfseries}{Part \,\thechapter\}{1em}{}
+
+%\chapter{Introduction} % Main chapter title
+
+\label{Chapter1} % For referencing the chapter elsewhere, use \ref{Chapter1} 
+
+\lhead{ \emph{Value Numbering Analysis}} % This is for the header on each page - perhaps a shortened title
+
+%----------------------------------------------------------------------------------------
+
+\section{Introduction}
+
+This class uses global value numbering,GVN, to eliminate fully
+redundant instructions.  It also performs simple dead load
+elimination together.\\
+To implent global value numbering, GVN create the value table class
+to  hold the mapping relation between values and value numbers, it also uses
+a structure LeaderTable which mapping from value numbers to lists of Value*'s which
+have same value number. 
+\\
+Basically, GVN does the valuing number work based on a
+domainator tree.It uses a dependency method to get the domaint tree 
+,  and then use a DFS iteration go through the whole dominator tree.
+This happens in the function "iterateOnFunction".Then it is
+instruction processing.
+ When meet an instruction, first check it could be
+emliminated  or not(it is not the valuing job, but only for
+convient, like merge block, simplicathin instruction),
+then put the instruction into VN(value nuber table),
+aslo add to LeaderTable, this will generate two numbers.
+According the two numbers, it will compare the current
+LeaderTableEntry with the other basic block numbers in the 
+dominator tree and dominates it.If found one, means, 
+current one could be eliminated. Since a function has one
+dominator tree, we only do clean job once.
+
+\section{Implementation}
+Based on the analysis of GVN, we could find that, SVN and LVN could
+be easily implented by offering the class a special block and limited 
+the checing range to this special blocks. For GVN, it is a dominator
+tree,For SVN it is an EBB, and For LVN , it is only one single basic
+block. 
+
+\subsection{SVN} 
+UNlike  the GVN, I did not care about the load emiliatin so much, what
+I do is use an EBBForest structure instead of domainator tree, iterating
+EBBTree sepeatly, and insert value to vn and LeaderTable.When
+doing findleader job, I only compare the basic block with those blocks
+ in LeaderTable and could extend it during the EBBTree.  
+
+\subsubsection{LVN} 
+Same idea about SVN Implementation, I processed one block one time. 
+ 
+\subsection{Command-line}
+There are two mechinism of argument passing in LLVM, one is use the
+parament directly, like "Release+Asserts/bin/opt -svn test.bc", 
+in this way, I  need to put this command to std-compiler-opts,and
+solve some problems about the dependency relationship. So far, I only
+find the flow of a argument, there are still some work on how let a
+svn class use gvn class well.\\ 
+There is another  way,easy way, just use it as a condition variable of GVN
+,like "Release+Asserts/bin/opt -gvn --enable-lvn=true test.bc" ,
+ then add “static cl::opt<bool> EnableLVN("enable-lvn",cl::init(false), cl::Hidden);”
+to front of the file, then we could use EnableLVN as a global bool
+type variable in this file.
+\subsection{EBB} 
+I designed a EBB pass in this way:\\
+First, construct an EBB tree class to implent an Extend basic block,
+it has a root to save the entry block, it also has a vector structure
+to save all block. I tried to create a new map structure to 
+map a basic block ant its ancestors, but because of the time,
+I did not finish yet.This class also provides some functions like
+verify the ancestor. \\
+Secondly, I counstruct an EBBForest class to save all ebbs in a
+function. Considering there would be multiple functions in file,
+I create an map structure to connect the function name and ebb forest.
+\\
+The main function Implemented in "runOnFunction", I also provide a
+function to save all ebbs in a file.
+
+\
+%----------------------------------------------------------------------------------------
+
+
+\section{Result anlysis}
+The result look like below:
+\begin{center}
+\begin{tabular}{|c|r|c|c|}
+\hline
+Delete NO & GVN  & SVN  & LVN \\
+\hline
+Bubblesort & 7 & 7 & 7  \\
+\hline
+FloatMM & 5 & 6 & 6  \\
+\hline
+IntMM & 6 & 6 &6 \\
+\hline
+Oscar & 7 & 7 & 6 \\
+\hline
+Perm & 3 & 3 & 2 \\
+\hline
+Puzzle & 23 & 17 & 27 \\
+\hline
+Queens & 3 & 3 & 0 \\
+\hline
+Quicksort & 14 & 13 & 12\\
+\hline
+RealMM & 6 & 6 & 6 \\
+\hline
+Towers & 5 & 5 & 59  \\
+\hline
+Treesort & 13 & 13 & 13\\
+\hline
+\end{tabular}
+\end{center}
+\begin{center}
+\begin{tabular}{|c|r|c|c|}
+\hline
+Time & GVN  & SVN  & LVN\\ 
+\hline
+Bubblesort & 0.0002 & 0.0002 & 0.0002  \\
+\hline
+FloatMM & 0.0002  & 0.0002 & 0.0002  \\
+\hline
+IntMM & 0.0002 & 0.0002 & 0.0001 \\
+\hline
+Oscar & 0.0004 & 0.0004 & 0.0003 \\
+\hline
+Perm & 0.002 & 0.0003 & 0.0002 \\
+\hline
+Puzzle & 0.001 & 0.0009 & 0.001\\
+\hline
+Queens & 0.0002 & 0.0002 & 0.0002  \\
+\hline
+Quicksort & 0.0002 & 0.0002 & 0.0002\\
+\hline
+RealMM & 0.0001 & 0.0001 &  0.0001\\
+\hline
+Towers & 0.0004 & 0.0004 & 0.0005  \\
+\hline
+Treesort & 0.0003 & 0.0003 & 0.0003\\
+\hline
+\end{tabular}
+\end{center}
+\begin{center}
+\begin{tabular}{|c|r|c|c|}
+\hline
+Compile T & GVN  & SVN  & LVN\\ 
+\hline
+Bubblesort & 0.004 & 0.0039 & 0.004  \\
+\hline
+FloatMM & 0.0048 & 0.0047 & 0.00473  \\
+\hline
+IntMM & 0.0054 & 0.005 & 0.0046 \\
+\hline
+Oscar & 0.0084 & 0.0084 & 0.0087 \\
+\hline
+Perm & 0.0031 & 0.0032 & 0.003 \\
+\hline
+Puzzle & 0.0286 & 0.0279 & 0.0276\\
+\hline
+Queens & 0.0051 & 0.005 & 0.005  \\
+\hline
+Quicksort & 0.0043 & 0.0043 & 0.0038\\
+\hline
+RealMM & 0.0044 & 0.0045 & 0.0045 \\
+\hline
+Towers & 0.006 & 0.0058 & 0.0060  \\
+\hline
+Treesort & 0.0052 & 0.0051 & 0.0051\\
+\hline
+\end{tabular}
+\end{center}
+\begin{center}
+\begin{tabular}{|c|r|c|c|}
+\hline
+Execute & GVN  & SVN  & LVN \\
+\hline
+Bubblesort & 0.005 & 0.005 & 0.005  \\
+\hline
+FloatMM & 0.001 & 0.004 & 0.006  \\
+\hline
+IntMM & 0.005  & 0.005 & 0.004 \\
+\hline
+Oscar & 0.009 & 0.009 & 0.011 \\
+\hline
+Perm & 0.0002 & 0.004 & 0.003 \\
+\hline
+Puzzle & 0.03 & 0.028  & 0.025\\
+\hline
+Queens & 0.006 & 0.004 & 0.004  \\
+\hline
+Quicksort & 0.003 & 0.004 & 0.003\\
+\hline
+RealMM & 0.003 & 0.004 & 0.004 \\
+\hline
+Towers & 0.004 & 0.006 & 0.005  \\
+\hline
+Treesort & 0.006 & 0.004  & 0.003\\
+\hline
+\end{tabular}
+\end{center}
+%----------------------------------------------------------------------------------------
+
+
+\section{Conclution}
+According to the data below, we could find that:\\
+1. Comiler time takes a big proportion of the total time, nealy equal
+to execute time, even bigger sometimes.\\
+2. From the exectute time, we find that gvn $<$ svn$<$lvn, which means a
+good optimization does improve execute effiency of program \\
+3. Each optimization time is less than 10 percents of total compiler
+time, so optimization is necessary.\\ 
+4. There is a relationship between code numbers and execute time,
+usually less code less time.\\
+5. A good opitimization improves effiency indeed, but it will improve
+the compile time at the same time. So a good algorithm is important
+even for opitimization Implementation.
+  
+
+%----------------------------------------------------------------------------------------
+
+
+\begin{flushright}
+%Guide written by ---\\
+%Sunil Patel: \href{http://www.sunilpatel.co.uk}{www.sunilpatel.co.uk}
+\end{flushright}
