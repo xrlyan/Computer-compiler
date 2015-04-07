@@ -1,0 +1,2 @@
+libparser-g.a(CminusScanner.o): CminusScanner.c ../node/node.h \
+ CminusParser.h
