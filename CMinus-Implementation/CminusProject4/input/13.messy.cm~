@@ -1,0 +1,11 @@
+int a, b[10];
+
+int main()
+{
+  a = 0;
+  while ( a < 10) {
+     b[a] = a*a;
+     a = a+1;
+  }
+
+}

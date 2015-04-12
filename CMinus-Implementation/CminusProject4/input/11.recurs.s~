@@ -1,0 +1,61 @@
+	.section	.rodata
+	.int_wformat: .string "%d\n"
+	.str_wformat: .string "%s\n"
+	.string_const0: .string "Enter a:"
+	.int_rformat: .string "%d"
+	.comm _gp, 8, 4
+	.text
+	.globl main
+	.type main,@function
+main:	nop
+	pushq %rbp
+	movq %rsp, %rbp
+	movl $.string_const0, %ebx
+	movl %ebx, %esi
+	movl $0, %eax
+	movl $.str_wformat, %edi
+	call printf
+	movq $_gp,%rbx
+	addq $0, %rbx
+	movl $.int_rformat, %edi
+	movl (%rbx), %esi
+	movl $0, %eax
+	call scanf
+	movq $_gp,%rcx
+	addq $0, %rcx
+	movl (%rcx), %r8d
+	movl $0, %ecx
+	movl %r8d, %eax
+	movl %ecx, %r9d
+	cmpl  %r9d, %eax
+	movl $0, %r9d
+	movl $1, %eax
+	cmovg %eax, %r9d
+	movl %r9d, %r8d
+	movl $0, %eax
+	cmpl %eax, %r8d
+	je .L2
+	movq $_gp,%rcx
+	addq $0, %rcx
+	movq $_gp,%r8
+	addq $0, %r8
+	movl (%r8), %r9d
+	movl $1, %r8d
+	subl %r8d, %r9d
+	movl %r9d, (%rcx)
+	jmp .L1
+.L2:
+	movq $_gp,%rcx
+	addq $0, %rcx
+	movl $0, %r8d
+	movl %r8d, (%rcx)
+.L1:
+	movq $_gp,%rcx
+	addq $0, %rcx
+	movl (%rcx), %r8d
+	movl %r8d, %esi
+	movl $0, %eax
+	movl $.int_wformat, %edi
+	call printf
+	leave
+	ret
