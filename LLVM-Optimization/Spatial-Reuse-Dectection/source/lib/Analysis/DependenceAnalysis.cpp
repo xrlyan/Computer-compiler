@@ -108,7 +108,7 @@ STATISTIC(BanerjeeSuccesses, "Banerjee successes");
 
 // begin add by liang yan
 static cl::opt<int> CacheLineSize("cls", cl::init(64), cl::Hidden);
-static cl::opt<bool> RefGroupFlag("refgroup", cl::init(false), cl::Hidden);
+static cl::opt<bool> SelfSpatialReuse("ssr", cl::init(false), cl::Hidden);
 // end add by liang yan
 
 
@@ -123,9 +123,7 @@ INITIALIZE_PASS_BEGIN(DependenceAnalysis, "da",
                       "Dependence Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(LoopInfo)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolution)
-INITIALIZE_PASS_DEPENDENCY(IndVarSimplify)
 INITIALIZE_AG_DEPENDENCY(AliasAnalysis)
-
 INITIALIZE_PASS_END(DependenceAnalysis, "da",
                     "Dependence Analysis", true, true)
 
@@ -157,19 +155,19 @@ void DependenceAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
 static
 void dumpExampleDependence(raw_ostream &OS, Function *F,
                            DependenceAnalysis *DA) {
- 
+  // begin add by liang yan
+  if(SelfSpatialReuse)
+    return;
+  // end add by liang yan
   for (inst_iterator SrcI = inst_begin(F), SrcE = inst_end(F);
        SrcI != SrcE; ++SrcI) {
     if (isa<StoreInst>(*SrcI) || isa<LoadInst>(*SrcI)) {
       for (inst_iterator DstI = SrcI, DstE = inst_end(F);
            DstI != DstE; ++DstI) {
         if (isa<StoreInst>(*DstI) || isa<LoadInst>(*DstI)) {
-          OS << "da analyze - "<<"\n";
-          errs()<< "SCI" << *SrcI << "\n";
-          errs()<< "DST" << *DstI << "\n";
-	  if (Dependence *D = DA->depends(&*SrcI, &*DstI, false)) {
-           D->dump(OS);
-	   errs()<<D->getLevels()<<"\n";
+          OS << "da analyze - ";
+          if (Dependence *D = DA->depends(&*SrcI, &*DstI, true)) {
+            D->dump(OS);
             for (unsigned Level = 1; Level <= D->getLevels(); Level++) {
               if (D->isSplitable(Level)) {
                 OS << "da analyze - split level = " << Level;
@@ -189,11 +187,7 @@ void dumpExampleDependence(raw_ostream &OS, Function *F,
 
 
 void DependenceAnalysis::print(raw_ostream &OS, const Module*) const {
-  ///add by liang
-  // make the output clean
-  if(!RefGroupFlag)
-    dumpExampleDependence(OS, F, const_cast<DependenceAnalysis *>(this));
-  // add by liang
+  dumpExampleDependence(OS, F, const_cast<DependenceAnalysis *>(this));
 }
 
 //===----------------------------------------------------------------------===//
@@ -583,8 +577,8 @@ bool DependenceAnalysis::intersectConstraints(Constraint *X,
 // For debugging purposes. Dumps a dependence to OS.
 void Dependence::dump(raw_ostream &OS) const {
   bool Splitable = false;
-  if (!isConfused())
-      OS << "confused";
+  if (isConfused())
+    OS << "confused";
   else {
     if (isConsistent())
       OS << "consistent ";
@@ -597,7 +591,6 @@ void Dependence::dump(raw_ostream &OS) const {
     else if (isInput())
       OS << "input";
     unsigned Levels = getLevels();
-    errs()<< "Levels =" << Levels << "\n"; 
     OS << " [";
     for (unsigned II = 1; II <= Levels; ++II) {
       if (isSplitable(II))
@@ -642,30 +635,10 @@ static
 AliasAnalysis::AliasResult underlyingObjectsAlias(AliasAnalysis *AA,
                                                   const Value *A,
                                                   const Value *B) {
-
   const Value *AObj = GetUnderlyingObject(A);
   const Value *BObj = GetUnderlyingObject(B);
-
-  if(RefGroupFlag){
-  // add by liang yan
-  // A == B means loop invariant, 
-  // A !=B && AObj == BObj, means accessing to the same memory address
-  if(A == B || (A != B && AObj == BObj)){
-    //errs()<<"A"<<*A<<"\n";
-    //errs()<<"B"<<*B<<"\n";
-    return AliasAnalysis::MustAlias;
-
-} 
-  else
-    return AA->alias(AObj, AA->getTypeStoreSize(AObj->getType()),
-		     BObj, AA->getTypeStoreSize(BObj->getType()));
-  // add by liang yan
-  }
-  else
-    return AA->alias(AObj, AA->getTypeStoreSize(AObj->getType()),
-		     BObj, AA->getTypeStoreSize(BObj->getType()));
-
-
+  return AA->alias(AObj, AA->getTypeStoreSize(AObj->getType()),
+                   BObj, AA->getTypeStoreSize(BObj->getType()));
 }
 
 
@@ -3287,7 +3260,7 @@ Dependence *DependenceAnalysis::depends(Instruction *Src,
                                         Instruction *Dst,
                                         bool PossiblyLoopIndependent) {
   if (Src == Dst)
-   PossiblyLoopIndependent = false;
+    PossiblyLoopIndependent = false;
 
   if ((!Src->mayReadFromMemory() && !Src->mayWriteToMemory()) ||
       (!Dst->mayReadFromMemory() && !Dst->mayWriteToMemory()))
@@ -3302,6 +3275,7 @@ Dependence *DependenceAnalysis::depends(Instruction *Src,
 
   Value *SrcPtr = getPointerOperand(Src);
   Value *DstPtr = getPointerOperand(Dst);
+
   switch (underlyingObjectsAlias(AA, DstPtr, SrcPtr)) {
   case AliasAnalysis::MayAlias:
   case AliasAnalysis::PartialAlias:
@@ -3315,11 +3289,11 @@ Dependence *DependenceAnalysis::depends(Instruction *Src,
   case AliasAnalysis::MustAlias:
     break; // The underlying objects alias; test accesses for dependence.
   }
-  
+
   // establish loop nesting levels
   establishNestingLevels(Src, Dst);
-  DEBUG(errs() << "    common nesting levels = " << CommonLevels << "\n");
-  DEBUG(errs() << "    maximum nesting levels = " << MaxLevels << "\n");
+  DEBUG(dbgs() << "    common nesting levels = " << CommonLevels << "\n");
+  DEBUG(dbgs() << "    maximum nesting levels = " << MaxLevels << "\n");
 
   FullDependence Result(Src, Dst, PossiblyLoopIndependent, CommonLevels);
   ++TotalArrayPairs;
@@ -3385,7 +3359,6 @@ Dependence *DependenceAnalysis::depends(Instruction *Src,
     DEBUG(dbgs() << "\tdst = " << *Pair[P].Dst << "\n");
     DEBUG(dbgs() << "\tclass = " << Pair[P].Classification << "\n");
     DEBUG(dbgs() << "\tloops = ");
-
     DEBUG(dumpSmallBitVector(Pair[P].Loops));
   }
 
@@ -3940,60 +3913,15 @@ const  SCEV *DependenceAnalysis::getSplitIteration(const Dependence *Dep,
 
 
 
-// add by liang yan 
-class InstrInfo{
-public:
-  unsigned pairSize;
-  Instruction *instruction;
-  unsigned currentLoopLevel;
-  std::string controlVariable;
-  APInt UpperBound[10];
-  unsigned PairLevel[10];//each subscript is at each level
-  APInt stride[10];  
-  unsigned CacheLineCount;
-  bool used;
-};
-  
-std::map<Instruction *, InstrInfo> instrInfoList;
-
-class RefGroupBase {
-public:
-  Instruction* groupLeader;
-  APInt loopCost;
-  int CalculateCost();
-  std::set<Instruction *> groupList;
-};
-
-class RefGroup {
-public:
-  unsigned currentLoopLevel;
-  std::string controlVariable;
-  std::vector<RefGroupBase > groupForLoop;
-};
-
-
-APInt totalBound[10];
-
-std::map<unsigned, RefGroup> refGroupResult;
-
-
 bool DependenceAnalysis::runOnFunction(Function &F) {
   this->F = &F;
   AA = &getAnalysis<AliasAnalysis>();
   SE = &getAnalysis<ScalarEvolution>();
   LI = &getAnalysis<LoopInfo>();
 
-  /*
-  SE->print(errs());
-  errs()<<"LI->end()-LI->begin()"<<LI->end()-LI->begin()<<"\n";
-  for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; i++) {
-    for(LoopInfoBase<BasicBlock, Loop>::iterator j = (*i)->begin(),f = (*i)->end();j != f;++j)
-      errs()<<(*j)->getNumBlocks()<<"\n";
-  }
-  */
 
   // begin add by liang yan
-  if(RefGroupFlag){
+  if(SelfSpatialReuse){
   // use for calcuting loop nest number  
   int loopNest = 0 ;
   const Loop *currentLoop; 
@@ -4024,21 +3952,12 @@ bool DependenceAnalysis::runOnFunction(Function &F) {
       
      // only deal with load and store instructions. 
     if (isa<StoreInst>(*SrcI)||isa<LoadInst>(*SrcI)) {             
-
       bool selfspatial = false;
       int level;
       Value *SrcPtr = getPointerOperand(&*SrcI);
 
       // make sure it only gets element pointer, which means a[i], not just a  propagating value
       if(dyn_cast<GetElementPtrInst>(&*SrcPtr)){
-
-	const BasicBlock *DstBlock = SrcI->getParent();
-	unsigned DstLevel = LI->getLoopDepth(DstBlock);
- 
-	InstrInfo instrInfo;
-	instrInfo.instruction = &*SrcI;
-	instrInfo.currentLoopLevel = DstLevel;
-
 	bool UsefulGEP = false;
 	GEPOperator *SrcGEP = dyn_cast<GEPOperator>(SrcPtr);
 	if (SrcGEP) {  
@@ -4063,8 +3982,7 @@ bool DependenceAnalysis::runOnFunction(Function &F) {
 	  Pair[0].Src = SrcSCEV;
 	}
 
-	instrInfo.pairSize = Pairs ;
-	
+
 	// collect all bounds of subscripts in different level for an array
         // this work should be done before deal with specify instruction.
 	SmallVector<APInt, 4> UpperBounds(Pairs);
@@ -4079,15 +3997,11 @@ bool DependenceAnalysis::runOnFunction(Function &F) {
 	    SrcCoeff = SrcAddRec->getStepRecurrence(*SE);
 	    SrcConst = SrcAddRec->getStart();
 	    SrcLoop =  SrcAddRec->getLoop();
-	    unsigned DstLevel = SrcLoop->getLoopDepth();
-	    instrInfo.PairLevel[P] = DstLevel;
 	    const SCEV *Delta = SE->getMinusSCEV(SrcConst, SrcConst);	    
 	    if (const SCEVConstant *UpperBound = collectConstantUpperBound(SrcLoop, Delta->getType())) {
 	      APInt bound = APInt(64,0); 
 	      bound = (UpperBound)->getValue()->getValue();
-	      instrInfo.UpperBound[P] = bound;
 	      UpperBounds[P] = bound;
-	      totalBound[DstLevel] = bound;
 	    }
 	  }
 	}
@@ -4102,8 +4016,8 @@ bool DependenceAnalysis::runOnFunction(Function &F) {
 	else{
 	  SizeOfVariable = AA->getTypeStoreSize(SrcI->getOperand(0)->getType());
 	}
-	APInt CacheLineCount = APInt(64,CacheLineSize/4); // get value from parameter --cls=64
-	instrInfo.CacheLineCount = CacheLineSize/4;
+	APInt CacheLineCount = APInt(64,CacheLineSize/SizeOfVariable); // get value from parameter --cls=64
+
 
 	// use this to avoid a[i][k][k] and a[i][k+1][k+1]
 	// would be in same cache line too. 
@@ -4125,8 +4039,6 @@ bool DependenceAnalysis::runOnFunction(Function &F) {
 	      SrcConst = SrcAddRec->getStart();
 	      SrcCoeff = SrcAddRec->getStepRecurrence(*SE);
 	      SrcLoop =  SrcAddRec->getLoop();
-	      APInt ConstCoeff = cast<SCEVConstant>(SrcCoeff)->getValue()->getValue();
-	      instrInfo.stride[P] = ConstCoeff*(APInt(64,SizeOfVariable/4));
 
 	      // I only think about the self-use at innermost level ,
 	      // for example I J K order, we only think about
@@ -4134,12 +4046,12 @@ bool DependenceAnalysis::runOnFunction(Function &F) {
 	      // if no K at all, I take it as a self-temp.
 	      if(SrcLoop->getLoopDepth() == Pairs-1){
 		APInt ConstCoeff = cast<SCEVConstant>(SrcCoeff)->getValue()->getValue();
-		stride = ConstCoeff*(APInt(64,SizeOfVariable/4));
+		stride = ConstCoeff;
 		// For I J order, we get A[j][j] here.
 		// the stride is stride*UpperBound[j]+ stride
 		APInt bounds = APInt(64,1);
 		if(P < Pairs-1){
-		  for(unsigned i=0;i<Pairs-1-P;i++){
+		  for(int i=0;i<Pairs-1-P;i++){
 		    bounds = bounds*UpperBounds[P+i+1];
 		  }
 		  strideCount=stride*bounds;
@@ -4160,320 +4072,24 @@ bool DependenceAnalysis::runOnFunction(Function &F) {
 		level = Pairs-1;
 		selfspatial = true;
 	      }	    
-	    }	    
+	    }
+	    
 	  }
 	}
-	instrInfoList[instrInfo.instruction] = instrInfo;
-	}
-      }
-    }
-  }  
-   
-
-  unsigned LastLevel;
-  for (inst_iterator SrcI = inst_begin(F), SrcE = inst_end(F);
-       SrcI != SrcE; ++SrcI) {
-    if (isa<PHINode>(*SrcI))
-      {
-	RefGroup refGroup;	
-	BasicBlock *DstBlock = SrcI->getParent();
-	unsigned DstLevel = LI->getLoopDepth(DstBlock);  
-
-	//const Loop *DstLoop = LI->getLoopFor(DstBlock);
-	//PHINode *ivar = DstLoop->getCanonicalInductionVariable();
-	//errs() << "ivar=========================" << *ivar <<"\n";
-	//LI->changeTopLevelLoop(DstLoop->getParentLoop()->getParentLoop(),DstLoop);
-
-	if(DstLevel == 1)
-	  LastLevel = DstLevel;
-	else {
-	  if(DstLevel==LastLevel)
-	    continue;
-	}
-	LastLevel = DstLevel;
-	refGroup.controlVariable = SrcI->getName() ;
-	refGroupResult[DstLevel]=refGroup;
-      }
-  }
-
-
-  for(unsigned k=0;k<refGroupResult.size();k++){
-    for(std::map<Instruction*,InstrInfo>::iterator it=instrInfoList.begin(); it!=instrInfoList.end(); ++it){
-      Instruction *SrcI = it->first;
-      Value *SrcPtr = getPointerOperand(SrcI);
-      // make sure it only gets element pointer, which means a[i], not just a  propagating value
-      if(dyn_cast<GetElementPtrInst>(&*SrcPtr)){
 	
-	unsigned currentPosition=1000;
-	RefGroupBase groupBase;
-	if(!refGroupResult[k].groupForLoop.size())
-	  {
-	    groupBase.groupList.insert(&*SrcI);
-	    refGroupResult[k].groupForLoop.push_back(groupBase);
-	  }
-
-	for(unsigned m=0;m<refGroupResult[k].groupForLoop.size();m++){
-	  for(std::set<Instruction *>::iterator it=refGroupResult[k].groupForLoop[m].groupList.begin();
-	      it!=refGroupResult[k].groupForLoop[m].groupList.end();++it){
-	    Instruction* DstI = *it;
-
-	    if(currentPosition==m)
-	      break;
-
-	    if(DstI == SrcI){
-	      currentPosition = m ;
-	      break;
-	    }
-
-	    Value *DstPtr = getPointerOperand(&*DstI);
-	    // make sure it only gets element pointer, which means a[i], not just a  propagating value
-	    if(dyn_cast<GetElementPtrInst>(&*DstPtr)){
-
-	      if (underlyingObjectsAlias(AA, DstPtr, SrcPtr)!= AliasAnalysis::MustAlias)
-		continue;
-	      if (Dependence *D = this->depends(&*SrcI, &*DstI, true)) {
-		bool shouldUse=true;		
-		if(!(D->isLoopIndependent()))
-		  shouldUse = false;
-		if(!shouldUse){
-		  shouldUse = true;
-		  if(D->isFlow() || D->isOutput()||D->isAnti()||D->isInput() )
-		    {
-		      unsigned Levels = D->getLevels();
-		      for (unsigned II = 1; II <= Levels; ++II) {
-			const SCEV *Distance = D->getDistance(II);
-			if(Distance){
-			  APInt distance= cast<SCEVConstant>(Distance)->getValue()->getValue();
-			  if(distance.isNegative ())
-			    distance = -distance;
-			  //unsigned outtermost = instrInfoList[SrcI].PairLevel[Levels];
-			  if ((distance.ugt(APInt(64,0)) && II < Levels) || (II == Levels &&  distance.uge(APInt(64,instrInfoList[SrcI].CacheLineCount))))
-			    {
-			      shouldUse = false;
-			      break;
-			    }
-			}else
-			  {
-			    shouldUse=false;
-			    break;
-			  }
-		      }
-		    if(!shouldUse){
-		      shouldUse = true;
-		      for (unsigned II = 1; II <= Levels; ++II) {
-			const SCEV *Distance = D->getDistance(II);
-			if(Distance){
-			APInt distance= cast<SCEVConstant>(Distance)->getValue()->getValue();
-			if(distance.isNegative ())
-			  distance = -distance;
-			//unsigned outtermost = instrInfoList[SrcI].PairLevel[k];
-			if ((distance.ugt(APInt(64,0)) && II != k) || (II == k && distance.uge(APInt(64,2))) )
-			  {
-			    shouldUse = false;
-			    break;
-			  }
-			}else{
-			  shouldUse = false;
-			  break;
-			}
-		      }
-		    }
-		    }
-		}
-		if(shouldUse){
-		  if(refGroupResult[k].groupForLoop[m].groupList.find(&*DstI)!=refGroupResult[k].groupForLoop[m].groupList.end()){
-		    currentPosition = m;
-		    refGroupResult[k].groupForLoop[m].groupList.insert(&*SrcI);
-		    break;
-		  }
-		}		  
-		delete D;
-	      }	      
-	    }	   	    
-	  }
+	// output the result 
+	if(selfspatial){
+	  errs()<<*SrcI << "\n";	    
+	  errs()<< "level : " << level << "\n";
+	  errs()<< "stride : " << stride << "\n" << "\n";
 	}
-	// if could not find the sci from the existing group, then add a new group
-	if(currentPosition==1000){
-	  RefGroupBase groupBase;
-	  groupBase.groupList.insert(&*SrcI);
-	  refGroupResult[k].groupForLoop.push_back(groupBase);
-	  
-	  for(unsigned m=0;m<refGroupResult[k].groupForLoop.size();m++){
-	    if(refGroupResult[k].groupForLoop[m].groupList.find(&*SrcI)!=refGroupResult[k].groupForLoop[m].groupList.end()){
-	      currentPosition = m ;
-	      break;
-	    }	
-	  }
-	}
-
-	for(std::map<Instruction*,InstrInfo>::iterator itt=it; itt!=instrInfoList.end(); ++itt){
-
-	  Instruction *DstI = itt->first;
-	  Value *DstPtr = getPointerOperand(&*DstI);
-
-	  // make sure it only gets element pointer, which means a[i], not just a  propagating value
-	  if(dyn_cast<GetElementPtrInst>(&*DstPtr)){
-
-	    if (DstI == SrcI)
-	      continue;
-	    if (underlyingObjectsAlias(AA, DstPtr, SrcPtr)!= AliasAnalysis::MustAlias)
-	      continue;
-
-	    if (Dependence *D = this->depends(&*SrcI, &*DstI, true)) {
-	      bool shouldUse=true;
-
-	      if(!(D->isLoopIndependent()))
-		shouldUse = false;
-
-	      if(!shouldUse){
-		shouldUse = true;
-		if(D->isFlow() || D->isOutput()||D->isAnti()||D->isInput() )
-		  {
-		    unsigned Levels = D->getLevels();
-		    for (unsigned II = 1; II <= Levels; ++II) {
-		      const SCEV *Distance = D->getDistance(II);
-		      if(Distance){
-			APInt distance= cast<SCEVConstant>(Distance)->getValue()->getValue();
-			if(distance.isNegative ())
-			  distance = -distance;
-			//unsigned outtermost = instrInfoList[SrcI].PairLevel[Levels];
-			if ((distance.ugt(APInt(64,0)) && II < Levels) || (II == Levels &&  distance.uge(APInt(64,instrInfoList[SrcI].CacheLineCount))))
-			{
-			  shouldUse = false;
-			  break;
-			}
-		      }else{
-			shouldUse = false;
-			break;
-		      }
-		    }
-		    if(!shouldUse){
-		      shouldUse = true;
-		      for (unsigned II = 1; II <= Levels; ++II) {
-			const SCEV *Distance = D->getDistance(II);
-			if(Distance){
-			  APInt distance= cast<SCEVConstant>(Distance)->getValue()->getValue();
-			  if(distance.isNegative ())
-			    distance = -distance;
-			  //unsigned outtermost = instrInfoList[SrcI].PairLevel[k];
-			  if ((distance.ugt(APInt(64,0)) && II != k) || (II == k && distance.uge(APInt(64,2))) )
-			    {
-			      shouldUse = false;
-			      break;
-			    }
-			}else{
-			  shouldUse = false;
-			  break;
-			}
-		      }
-		    }
-		  }
-	      }
-	      if(shouldUse){
-		if(refGroupResult[k].groupForLoop[currentPosition].groupList.find(&*DstI) != refGroupResult[k].groupForLoop[currentPosition].groupList.end()){
-		  refGroupResult[k].groupForLoop[currentPosition].groupList.insert(&*DstI);
-		}
-	      }	    
-	      delete D;
-	    }	      
-	  }
+	
 	}
       }
     }
   }  
-  
-  // calculate the group leader here.
-  for(unsigned i=1;i< refGroupResult.size();i++)
-  {
-    for(unsigned j=0; j< refGroupResult[i].groupForLoop.size();j++){
-
-      if(refGroupResult[i].groupForLoop[j].groupList.size()==1){
-	refGroupResult[i].groupForLoop[j].groupLeader = *(refGroupResult[i].groupForLoop[j].groupList.begin());
-      }else{
-	refGroupResult[i].groupForLoop[j].groupLeader = *(refGroupResult[i].groupForLoop[j].groupList.begin());
-
-	for(std::set<Instruction *>::iterator it=refGroupResult[i].groupForLoop[j].groupList.begin();it!=
-	      refGroupResult[i].groupForLoop[j].groupList.begin();it++){
-	  Instruction *SrcI = refGroupResult[i].groupForLoop[j].groupLeader;
-	  Instruction *DstI = *it;
-	  if(SrcI == DstI)
-	    continue;
-	  
-	  //BasicBlock *SrcBlock = SrcI->getParent();
-	  //Loop *SrcLoop = LI->getLoopFor(SrcBlock);
-	  // BasicBlock *ExitingBlock = SrcLoop->getExitingBlock();
-	  //unsigned bound = SrcLoop -> getSmallConstantTripCount();
-	  //unsigned bound = SE->getSmallConstantTripCount(SrcLoop,ExitingBlock);
-	  //errs()<<"bound =========== :"<<bound<<"\n";
-	  //PrintLoopInfo(errs(), SE, SrcLoop);
-
-	  if (Dependence *D = this->depends(&*SrcI, &*DstI, true)) {
-	    bool shouldChangeLeader=false;
-	    unsigned Levels = D->getLevels();
-	    for (unsigned II = 1; II <= Levels; ++II) {
-	      const SCEV *Distance = D->getDistance(II);
-	      if(Distance){
-		APInt distance= cast<SCEVConstant>(Distance)->getValue()->getValue();
-		if(distance.isNegative ())
-		  shouldChangeLeader = true;
-		else
-		  continue;
-	      }
-	    }
-	    if(shouldChangeLeader)
-	      refGroupResult[i].groupForLoop[j].groupLeader = DstI;
-	  }
-	}
-      }
-    }
-  }
-
-  
-  // calculate the group cost
-  
-  for(unsigned i=1;i< refGroupResult.size();i++){
-    for(unsigned j=0; j< refGroupResult[i].groupForLoop.size();j++){
-      Instruction* leader = refGroupResult[i].groupForLoop[j].groupLeader;
-      InstrInfo instrInfo = instrInfoList[leader];
-      refGroupResult[i].groupForLoop[j].loopCost = APInt(64,1);
-      
-      APInt tempCost = APInt(64,1);
-      
-      if(i == instrInfo.PairLevel[instrInfo.pairSize-1]){
-	tempCost = (totalBound[instrInfo.PairLevel[instrInfo.pairSize-1]]).sdiv(APInt(64,instrInfo.CacheLineCount));
-	tempCost =tempCost * instrInfo.stride[instrInfo.pairSize-1];
-      }else{
-	tempCost = totalBound[instrInfo.PairLevel[instrInfo.pairSize-1]];	
-      }
-      
-      for(unsigned m=1; m< instrInfo.pairSize-1;m++)
-	refGroupResult[i].groupForLoop[j].loopCost = tempCost * totalBound[instrInfo.PairLevel[m]];
-    }
-  }
-
-
-  //output the result 
-  for(unsigned i=1;i< refGroupResult.size();i++)
-  {
-    errs()<<"Loop Control Variable: "<<refGroupResult[i].controlVariable<<"\n";
-    errs()<<" { " << "\n"; 
-    for(unsigned j=0; j< refGroupResult[i].groupForLoop.size();j++){
-      errs()<<"================"<<"\n";
-      errs()<<" Header: "<<*(refGroupResult[i].groupForLoop[j].groupLeader)<<"\n";
-      errs()<<" Loop  Cost for " <<refGroupResult[i].controlVariable<<" at Level " <<i<<" : "<<(refGroupResult[i].groupForLoop[j].loopCost)<<"\n";
-      errs()<<"================"<<"\n";
-      errs()<<" [ " << "\n";
-      for(std::set<Instruction *>::iterator it=refGroupResult[i].groupForLoop[j].groupList.begin();it!=
-	    refGroupResult[i].groupForLoop[j].groupList.end();it++)
-	errs()<<  **it <<"\n";
-      errs()<<" ] " << "\n";     
-    }
-    errs()<<" } " << "\n";
-  }
- 
-  }
-
-// end add by liang yan
+  } 
+  // end add by liang yan
   return false;
 }
 
